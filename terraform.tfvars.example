@@ -1,0 +1,16 @@
+project_id = "REEMPLAZAR_CON_TU_PROJECT_ID"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+# Escenario 1: Produccion activa.
+prod_weight        = 100
+contingency_weight = 0
+
+# Escenario 2: Mantenimiento total.
+# prod_weight        = 0
+# contingency_weight = 100
+
+# Escenario 3: Balance 50/50.
+# prod_weight        = 50
+# contingency_weight = 50
+
