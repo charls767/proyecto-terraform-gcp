@@ -17,14 +17,15 @@ proyecto-terraform-gcp/
 ├── main.tf                    # Definición completa de todos los recursos GCP
 ├── variables.tf               # Declaración de variables con validaciones
 ├── outputs.tf                 # Valores que Terraform expone tras el despliegue
-├── terraform.tfvars.example   # Plantilla de valores de variables (no contiene datos reales)
-├── .gitignore                 # Excluye terraform.tfvars y archivos de estado
+├── terraform.tfvars           # Valores reales versionados (project_id + escenario activo)
+├── terraform.tfvars.example   # Plantilla de referencia
+├── .gitignore                 # Excluye archivos de estado (.tfstate)
 ├── .terraform.lock.hcl        # Lock file del proveedor hashicorp/google ~> 6.0
 ├── evidencias/                # Carpeta con capturas de pantalla de los tres escenarios
 └── README.md                  # Manual de uso para humanos
 ```
 
-> **Importante:** El archivo `terraform.tfvars` **no existe en el repositorio** (está en `.gitignore`). El agente que despliegue este proyecto debe crearlo a partir de `terraform.tfvars.example`, estableciendo al menos el valor de `project_id`.
+> **Importante:** El archivo `terraform.tfvars` **está versionado** e incluye el `project_id` y el escenario activo, por lo que el proyecto se despliega con un solo `terraform apply` sin pasos previos. Para cambiar de escenario se editan únicamente `prod_weight` y `contingency_weight` en ese archivo. Lo único excluido por `.gitignore` es el estado (`*.tfstate`).
 
 ---
 
@@ -41,7 +42,7 @@ Todas las variables se declaran en `variables.tf`. Para modificar el comportamie
 | `prod_weight`        | number | `100`         | Peso de tráfico hacia el Servicio Principal (0–100).            |
 | `contingency_weight` | number | `0`           | Peso de tráfico hacia el Servicio de Contingencia (0–100).      |
 
-**Regla crítica:** `prod_weight + contingency_weight` debe ser mayor que 0. Esta restricción está implementada como un bloque `check` en `main.tf` y como validaciones individuales en `variables.tf`.
+**Regla crítica:** `prod_weight + contingency_weight` debe ser mayor que 0. Esta restricción se implementa como un `precondition` en el `google_compute_url_map` de `main.tf` (detiene el `apply` con error si la suma es 0) y como validaciones individuales de rango en `variables.tf`.
 
 ---
 
@@ -168,8 +169,8 @@ terraform destroy
 
 1. **No modificar los archivos `.tf`** para cambiar escenarios. Solo editar `terraform.tfvars`.
 2. **No dejar recursos activos** tras las pruebas. Ejecutar siempre `terraform destroy` al finalizar y confirmar con `terraform state list` que queda vacío.
-3. **No subir `terraform.tfvars` al repositorio.** Contiene el `project_id` real y está explícitamente excluido por `.gitignore`.
-4. **No subir `terraform.tfstate` ni `terraform.tfstate.backup`.** También excluidos por `.gitignore`. Si el agente realiza pruebas locales, debe destruir los recursos antes de que el profesor haga el despliegue de revisión; de lo contrario, GCP rechazará el despliegue por nombres duplicados.
+3. **`terraform.tfvars` SÍ está versionado** e incluye el `project_id` para que el repositorio sea autocontenido. Para cambiar de escenario solo se editan los pesos en ese archivo.
+4. **No subir `terraform.tfstate` ni `terraform.tfstate.backup`.** Están excluidos por `.gitignore`. Si el agente realiza pruebas locales, debe destruir los recursos antes de que el profesor haga el despliegue de revisión; de lo contrario, GCP rechazará el despliegue por nombres duplicados.
 5. El proveedor requerido es `hashicorp/google ~> 6.0` con Terraform `>= 1.5.0`.
 
 ---
@@ -177,5 +178,5 @@ terraform destroy
 ## Notas de compatibilidad
 
 - La propiedad `load_balancing_scheme = "EXTERNAL_MANAGED"` en los backend services y en el forwarding rule es requerida para usar `weighted_backend_services` en el URL Map con el proveedor google `~> 6.0`. No cambiar a `EXTERNAL`.
-- El bloque `check` de Terraform (validación en tiempo de plan) requiere Terraform `>= 1.5.0`.
+- El `precondition` del `url_map` valida la suma de pesos en tiempo de plan y detiene el `apply` si es 0.
 - La imagen de las VMs es `debian-cloud/debian-12`. No cambiar a versiones anteriores sin verificar disponibilidad de Python 3.

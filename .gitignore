@@ -8,7 +8,8 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 .terraform.lock.hcl.backup
-terraform.tfvars
+# terraform.tfvars SI se versiona: contiene el project_id (no secreto) para que
+# el repositorio se ejecute con un solo "terraform apply" sin intervencion manual.
 terraform.tfvars.json
 *.auto.tfvars
 *.auto.tfvars.json

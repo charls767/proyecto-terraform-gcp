@@ -50,13 +50,9 @@ La suma de `prod_weight` y `contingency_weight` debe ser mayor que cero. Cada pe
 
 ## Configuracion
 
-Crea un archivo local `terraform.tfvars` desde el ejemplo:
+El repositorio incluye un `terraform.tfvars` ya versionado con el `project_id` y el Escenario 1 activo, de modo que se ejecuta con un solo `terraform apply` sin pasos manuales. Para cambiar de escenario, edita unicamente los pesos en `terraform.tfvars` (descomenta el bloque del escenario deseado). El `project_id` no es un dato secreto: es el identificador del proyecto sobre el que se otorga acceso IAM al revisor.
 
-```powershell
-Copy-Item terraform.tfvars.example terraform.tfvars
-```
-
-Edita el `project_id` y los pesos del escenario que quieras probar. `terraform.tfvars` esta ignorado por Git para evitar publicar datos de la cuenta.
+> El archivo `terraform.tfvars.example` se conserva como plantilla de referencia.
 
 ## Ejecucion
 

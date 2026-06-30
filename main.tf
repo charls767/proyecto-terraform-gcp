@@ -15,13 +15,6 @@ provider "google" {
   zone    = var.zone
 }
 
-check "traffic_weights" {
-  assert {
-    condition     = var.prod_weight + var.contingency_weight > 0
-    error_message = "La suma de prod_weight y contingency_weight debe ser mayor que 0."
-  }
-}
-
 locals {
   backend_tag = "${var.name_prefix}-backend"
 
@@ -255,6 +248,13 @@ resource "google_compute_backend_service" "contingency" {
 resource "google_compute_url_map" "traffic" {
   name            = "${var.name_prefix}-url-map"
   default_service = local.default_backend_service_id
+
+  lifecycle {
+    precondition {
+      condition     = var.prod_weight + var.contingency_weight > 0
+      error_message = "La suma de prod_weight y contingency_weight debe ser mayor que 0: al menos un servicio debe recibir trafico."
+    }
+  }
 
   host_rule {
     hosts        = ["*"]
