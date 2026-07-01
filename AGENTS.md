@@ -140,9 +140,9 @@ Este servidor responde en el puerto 80 sin dependencias externas adicionales (so
 ## Comandos de despliegue y verificación
 
 ```bash
-# Configuración inicial (una sola vez)
+# Autenticacion: unico paso previo. NO editar archivos ni fijar el proyecto,
+# Terraform toma el project_id desde terraform.tfvars.
 gcloud auth application-default login
-gcloud config set project TU_PROJECT_ID
 
 # Despliegue
 terraform init
@@ -153,9 +153,9 @@ terraform apply
 # Verificar IP pública
 terraform output lb_ip
 
-# Verificar salud de los backends
-gcloud compute backend-services get-health $(terraform output -raw prod_backend_name) --global
-gcloud compute backend-services get-health $(terraform output -raw contingency_backend_name) --global
+# Verificar salud de los backends (--project explicito, no depende de gcloud config)
+gcloud compute backend-services get-health $(terraform output -raw prod_backend_name) --global --project moonlit-buckeye-486820-c0
+gcloud compute backend-services get-health $(terraform output -raw contingency_backend_name) --global --project moonlit-buckeye-486820-c0
 
 # Limpieza obligatoria al terminar
 terraform destroy
