@@ -1,134 +1,88 @@
-# Proyecto Terraform - Trafico ponderado en GCP
+# Proyecto Terraform — Tráfico ponderado en GCP
 
-Este repositorio despliega una arquitectura en Google Cloud Platform usando Terraform. El objetivo es exponer una unica IP publica y distribuir el trafico HTTP hacia dos servicios independientes mediante pesos configurados en `terraform.tfvars`.
+Infraestructura como código que expone una única IP pública y reparte el tráfico HTTP entre dos servicios independientes, según pesos definidos en `terraform.tfvars`.
 
 ## Arquitectura
 
 ```mermaid
 flowchart LR
-    U["Usuario en internet"] --> IP["IP publica unica"]
+    U["Usuario en internet"] --> IP["IP pública única"]
     IP --> FR["Global forwarding rule :80"]
     FR --> PROXY["Target HTTP proxy"]
     PROXY --> URLMAP["URL map con pesos"]
-    URLMAP -->|"prod_weight"| BP["Backend produccion"]
+    URLMAP -->|"prod_weight"| BP["Backend producción"]
     URLMAP -->|"contingency_weight"| BC["Backend contingencia"]
-    BP --> VMP["VM produccion"]
+    BP --> VMP["VM producción"]
     BC --> VMC["VM contingencia"]
 ```
 
-La solucion crea una VPC custom, una subred, dos VMs `e2-micro` sin IP publica directa, dos grupos de instancia, un health check HTTP, un firewall limitado a los rangos de Google Load Balancing y un Global external Application Load Balancer HTTP.
+VPC custom con una subred, dos VMs `e2-micro` sin IP pública, dos grupos de instancia, un health check HTTP, un firewall restringido a los rangos de health-check de Google y un Application Load Balancer externo global. Cada servicio corre en su propia VM: la caída de uno no afecta al otro.
 
-## Requisitos previos
+## Requisitos
 
-- Proyecto GCP con facturacion activa.
-- Usuario autenticado con permisos para crear recursos Compute Engine.
-- Terraform instalado.
-- APIs habilitadas o habilitables: `serviceusage.googleapis.com` y `compute.googleapis.com`.
+- Terraform ≥ 1.5 y `gcloud` instalados.
+- Cuenta con rol Editor sobre el proyecto `moonlit-buckeye-486820-c0`. El `project_id` ya está fijado en `terraform.tfvars`, por lo que no hay que editar ningún `.tf`.
 
-Comandos sugeridos antes de ejecutar:
+Autenticación y preparación del proyecto (una sola vez):
 
 ```powershell
 gcloud auth login
 gcloud auth application-default login
-gcloud config set project TU_PROJECT_ID
-gcloud services enable serviceusage.googleapis.com compute.googleapis.com
+gcloud config set project moonlit-buckeye-486820-c0
+gcloud services enable serviceusage.googleapis.com compute.googleapis.com --project moonlit-buckeye-486820-c0
 ```
 
 ## Variables
 
-| Variable | Descripcion | Ejemplo |
+| Variable | Descripción | Valor |
 |---|---|---|
-| `project_id` | ID exacto del proyecto GCP. | `mi-proyecto-gcp` |
-| `region` | Region de la subred. | `us-central1` |
-| `zone` | Zona donde se crean las VMs. | `us-central1-a` |
-| `name_prefix` | Prefijo de nombres para evitar colisiones. | `tf-proyecto` |
-| `prod_weight` | Peso hacia el servicio principal. | `100` |
-| `contingency_weight` | Peso hacia el servicio de contingencia. | `0` |
+| `project_id` | ID del proyecto GCP. | fijado en `terraform.tfvars` |
+| `region` / `zone` | Ubicación de los recursos. | `us-east1` / `us-east1-b` |
+| `name_prefix` | Prefijo de nombres. | `tf-proyecto` |
+| `prod_weight` | Peso hacia el servicio principal. | `0`–`100` |
+| `contingency_weight` | Peso hacia el servicio de contingencia. | `0`–`100` |
 
-La suma de `prod_weight` y `contingency_weight` debe ser mayor que cero. Cada peso debe estar entre `0` y `100`.
+La suma de ambos pesos debe ser mayor que 0.
 
-## Configuracion
-
-El repositorio incluye un `terraform.tfvars` ya versionado con el `project_id` y el Escenario 1 activo, de modo que se ejecuta con un solo `terraform apply` sin pasos manuales. Para cambiar de escenario, edita unicamente los pesos en `terraform.tfvars` (descomenta el bloque del escenario deseado). El `project_id` no es un dato secreto: es el identificador del proyecto sobre el que se otorga acceso IAM al revisor.
-
-> El archivo `terraform.tfvars.example` se conserva como plantilla de referencia.
-
-## Ejecucion
+## Despliegue
 
 ```powershell
 terraform init
-terraform fmt -recursive
-terraform validate
-terraform plan
 terraform apply
-```
-
-Al terminar, consulta la IP publica unica:
-
-```powershell
-terraform output lb_url
 terraform output -raw lb_ip
 ```
 
-Los backends pueden tardar entre 3 y 10 minutos en aparecer saludables tras el primer despliegue.
+Tras el primer `apply`, los backends tardan unos minutos en quedar saludables; durante ese lapso la IP puede responder vacío o con error 502. El estado se consulta con:
 
-## Escenarios de evaluacion
+```powershell
+gcloud compute backend-services get-health "$(terraform output -raw prod_backend_name)" --global --project moonlit-buckeye-486820-c0
+gcloud compute backend-services get-health "$(terraform output -raw contingency_backend_name)" --global --project moonlit-buckeye-486820-c0
+```
 
-| Escenario | `prod_weight` | `contingency_weight` | Resultado esperado |
+## Escenarios de evaluación
+
+Cada escenario se activa editando **solo** los pesos en `terraform.tfvars` y ejecutando `terraform apply`.
+
+| Escenario | `prod_weight` | `contingency_weight` | Resultado |
 |---|---:|---:|---|
-| Produccion activa | 100 | 0 | Todas las respuestas muestran `Bienvenido al Servicio Principal - Versión Producción` |
-| Mantenimiento total | 0 | 100 | Todas las respuestas muestran `Error 503 - Sitio en Mantenimiento Programado` |
-| Balance 50/50 | 50 | 50 | Varias peticiones muestran ambos servicios |
+| Producción activa | 100 | 0 | Todo el tráfico muestra `Bienvenido al Servicio Principal - Versión Producción` |
+| Mantenimiento total | 0 | 100 | Todo el tráfico muestra `Error 503 - Sitio en Mantenimiento Programado` |
+| Balance 50/50 | 50 | 50 | Las peticiones alternan entre ambos servicios |
 
-Para probar despues de cada cambio de pesos:
-
-```powershell
-terraform apply
-$ip = terraform output -raw lb_ip
-1..20 | ForEach-Object {
-  curl.exe -s -H "Cache-Control: no-cache" "http://$ip"
-}
-```
-
-Para el escenario `50/50`, si las peticiones desde una sola terminal salen muy cargadas hacia un servicio, prueba con un `Host` distinto por solicitud para observar mejor la distribucion ponderada:
+Prueba:
 
 ```powershell
 $ip = terraform output -raw lb_ip
-1..80 | ForEach-Object {
-  $hostName = "test-$([guid]::NewGuid().ToString('N')).example.com"
-  curl.exe -s -H "Host: $hostName" -H "Cache-Control: no-cache, no-store" "http://$ip/?t=$([guid]::NewGuid())"
-}
-```
-
-Para revisar la salud de los backends:
-
-```powershell
-gcloud compute backend-services get-health "$(terraform output -raw prod_backend_name)" --global
-gcloud compute backend-services get-health "$(terraform output -raw contingency_backend_name)" --global
+1..20 | ForEach-Object { curl.exe -s "http://$ip"; "" }
 ```
 
 ## Evidencias
 
-Guarda en `evidencias/` capturas o logs de:
+En `evidencias/`: logs de los tres escenarios y de la ejecución final de `terraform destroy`.
 
-- Escenario 1: produccion activa.
-- Escenario 2: mantenimiento total.
-- Escenario 3: balance 50/50.
-- Ejecucion final exitosa de `terraform destroy`.
-
-## Limpieza obligatoria
-
-Ejecuta siempre:
+## Limpieza
 
 ```powershell
 terraform destroy
-terraform state list
+terraform state list   # no debe quedar ningún recurso
 ```
-
-`terraform state list` no debe mostrar recursos despues de la destruccion. Revisa tambien en GCP que no queden VMs, balanceadores, VPCs, reglas de firewall ni direcciones IP externas creadas por este proyecto.
-
-
-
-## Advertencia de costos
-
-Aunque se usan recursos pequenos, la infraestructura puede generar costos mientras este desplegada. Ejecuta `terraform destroy` al terminar las pruebas.
