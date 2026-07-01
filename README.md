@@ -24,7 +24,6 @@ La solucion crea una VPC custom, una subred, dos VMs `e2-micro` sin IP publica d
 - Usuario autenticado con permisos para crear recursos Compute Engine.
 - Terraform instalado.
 - APIs habilitadas o habilitables: `serviceusage.googleapis.com` y `compute.googleapis.com`.
-- Acceso IAM del profesor `vdrestrepot@unal.edu.co` con rol `roles/editor`, segun la rubrica.
 
 Comandos sugeridos antes de ejecutar:
 
@@ -128,19 +127,7 @@ terraform state list
 
 `terraform state list` no debe mostrar recursos despues de la destruccion. Revisa tambien en GCP que no queden VMs, balanceadores, VPCs, reglas de firewall ni direcciones IP externas creadas por este proyecto.
 
-## Entrega
 
-El repositorio debe enviarse por correo con el asunto exacto:
-
-```text
-[Servicios Nube 2026-01] Proyecto Terraform - Grupo [Numero de Grupo]
-```
-
-Ejemplo:
-
-```text
-[Servicios Nube 2026-01] Proyecto Terraform - Grupo 3
-```
 
 ## Advertencia de costos
 
