@@ -20,21 +20,20 @@ La solucion crea una VPC custom, una subred, dos VMs `e2-micro` sin IP publica d
 
 ## Requisitos previos
 
+- Proyecto GCP con facturacion activa.
+- Usuario autenticado con permisos para crear recursos Compute Engine.
 - Terraform instalado.
-- `gcloud` (Google Cloud SDK) instalado.
-- Una cuenta de Google con acceso al proyecto `moonlit-buckeye-486820-c0` (el profesor ya tiene rol `roles/editor` en el, segun la rubrica).
+- APIs habilitadas o habilitables: `serviceusage.googleapis.com` y `compute.googleapis.com`.
+- Acceso IAM del profesor `vdrestrepot@unal.edu.co` con rol `roles/editor`, segun la rubrica.
 
-## Autenticacion (paso unico, no requiere editar ningun archivo)
-
-El `project_id` ya viene fijado en `terraform.tfvars`, asi que **nadie necesita editar los `.tf`**. Lo unico que cada persona debe hacer una sola vez en su maquina es iniciar sesion con su propia cuenta de Google:
+Comandos sugeridos antes de ejecutar:
 
 ```powershell
+gcloud auth login
 gcloud auth application-default login
+gcloud config set project TU_PROJECT_ID
+gcloud services enable serviceusage.googleapis.com compute.googleapis.com
 ```
-
-Eso abre el navegador, inicias sesion y Terraform ya puede desplegar. **No** es necesario `gcloud config set project` para `terraform apply`: Terraform toma el proyecto desde `terraform.tfvars`, no desde la configuracion de `gcloud`.
-
-> `gcloud config set project` solo se necesita para los comandos auxiliares de `gcloud` (como `get-health`). En este README esos comandos ya incluyen `--project`, asi que tampoco hace falta configurarlo.
 
 ## Variables
 
@@ -58,7 +57,6 @@ El repositorio incluye un `terraform.tfvars` ya versionado con el `project_id` y
 ## Ejecucion
 
 ```powershell
-gcloud auth application-default login   # paso unico de autenticacion
 terraform init
 terraform fmt -recursive
 terraform validate
@@ -106,8 +104,8 @@ $ip = terraform output -raw lb_ip
 Para revisar la salud de los backends:
 
 ```powershell
-gcloud compute backend-services get-health "$(terraform output -raw prod_backend_name)" --global --project moonlit-buckeye-486820-c0
-gcloud compute backend-services get-health "$(terraform output -raw contingency_backend_name)" --global --project moonlit-buckeye-486820-c0
+gcloud compute backend-services get-health "$(terraform output -raw prod_backend_name)" --global
+gcloud compute backend-services get-health "$(terraform output -raw contingency_backend_name)" --global
 ```
 
 ## Evidencias
