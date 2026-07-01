@@ -140,7 +140,7 @@ resource "google_compute_instance" "prod" {
     subnetwork = google_compute_subnetwork.subnet.id
   }
 
-  metadata_startup_script = local.prod_startup_script
+  metadata_startup_script = replace(local.prod_startup_script, "\r\n", "\n")
 }
 
 resource "google_compute_instance" "contingency" {
@@ -161,7 +161,7 @@ resource "google_compute_instance" "contingency" {
     subnetwork = google_compute_subnetwork.subnet.id
   }
 
-  metadata_startup_script = local.contingency_startup_script
+  metadata_startup_script = replace(local.contingency_startup_script, "\r\n", "\n")
 }
 
 resource "google_compute_instance_group" "prod" {

@@ -1,0 +1,8 @@
+# Forzar finales de linea LF en todo el repositorio.
+# Evita que un clon en Windows (CRLF) rompa los scripts de arranque de las VMs.
+* text=auto eol=lf
+
+# Scripts y codigo que DEBEN ser LF si o si.
+*.tf   text eol=lf
+*.sh   text eol=lf
+*.hcl  text eol=lf
