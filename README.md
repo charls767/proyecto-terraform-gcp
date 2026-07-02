@@ -34,15 +34,18 @@ gcloud services enable serviceusage.googleapis.com compute.googleapis.com --proj
 
 ## Variables
 
+Valores actuales en `terraform.tfvars`:
+
 | Variable | Descripción | Valor |
 |---|---|---|
-| `project_id` | ID del proyecto GCP. | fijado en `terraform.tfvars` |
-| `region` / `zone` | Ubicación de los recursos. | `us-east1` / `us-east1-b` |
-| `name_prefix` | Prefijo de nombres. | `tf-proyecto` |
-| `prod_weight` | Peso hacia el servicio principal. | `0`–`100` |
-| `contingency_weight` | Peso hacia el servicio de contingencia. | `0`–`100` |
+| `project_id` | ID del proyecto GCP. | `moonlit-buckeye-486820-c0` |
+| `region` | Región de los recursos. | `us-east1` |
+| `zone` | Zona de las VMs. | `us-east1-b` |
+| `name_prefix` | Prefijo de nombres de recursos. | `tf-proyecto` |
+| `prod_weight` | Peso hacia el servicio principal (0–100). | `100` |
+| `contingency_weight` | Peso hacia el servicio de contingencia (0–100). | `0` |
 
-La suma de ambos pesos debe ser mayor que 0.
+La suma de ambos pesos debe ser mayor que 0. Los pesos son las únicas variables que cambian entre escenarios.
 
 ## Despliegue
 
